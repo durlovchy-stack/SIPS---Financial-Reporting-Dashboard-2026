@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPS - Financial Reporting Dashboard 2026</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- XLSX & jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        .light-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .sidebar {
+            background-color: #ffffff;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .sticky-header th {
+            position: sticky;
+            top: 0;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            z-index: 10;
+        }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .edit-input {
+            background-color: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #0f172a;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            transition: all 0.2s;
+        }
+        .edit-input:focus {
+            border-color: #059669;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar Menu -->
+    <aside class="sidebar w-64 flex-shrink-0 flex flex-col justify-between z-20">
+        <div>
+            <!-- Brand Logo -->
+            <div class="p-6 flex items-center gap-3 border-b border-slate-200">
+                <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold text-xl flex items-center justify-center shadow">
+                    S
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-800 text-lg leading-tight" contenteditable="true">SIPS Project</h1>
+                    <p class="text-xs text-slate-500" contenteditable="true">Financial Reporting 2026</p>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="p-4 space-y-1">
+                <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold bg-emerald-600 text-white transition-all shadow-sm">
+                    <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                </a>
+                <a href="#" onclick="switchTab('fund')" id="nav-fund" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
+                    <i class="fa-solid fa-wallet w-5"></i> Fund Overview
+                </a>
+                <a href="#" onclick="switchTab('budget')" id="nav-budget" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
+                    <i class="fa-solid fa-scale-balanced w-5"></i> Budget vs Utilization
+                </a>
+                <a href="#" onclick="switchTab('obligations')" id="nav-obligations" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
+                    <i class="fa-solid fa-file-invoice-dollar w-5"></i> Present Obligations
+                </a>
+                <a href="#" onclick="switchTab('salary')" id="nav-salary" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
+                    <i class="fa-solid fa-users-gear w-5"></i> Salary & DPC Cost
+                </a>
+                <a href="#" onclick="switchTab('upcoming')" id="nav-upcoming" class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
+                    <i class="fa-solid fa-hourglass-half w-5"></i> Upcoming Obligations
+                </a>
+            </nav>
+        </div>
+
+        <div class="p-4 border-t border-slate-200 space-y-2">
+            <a href="#" onclick="switchTab('settings')" id="nav-settings" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all">
+                <i class="fa-solid fa-gear w-5"></i> Settings
+            </a>
+            <div class="px-4 py-2 text-xs text-slate-500 flex items-center justify-between">
+                <span><i class="fa-solid fa-sun text-amber-500 mr-1.5"></i> Light Mode</span>
+                <span class="bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded text-[10px]">Active</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
+        <!-- Top Navigation Bar -->
+        <header class="h-16 border-b border-slate-200 px-6 flex items-center justify-between bg-white z-10 shadow-sm">
+            <div class="flex items-center gap-4">
+                <h2 id="page-title" class="text-xl font-bold text-slate-800" contenteditable="true">SIPS-Financial Reporting Dashboard 2026</h2>
+                <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold border border-emerald-300">
+                    <i class="fa-solid fa-pen-to-square text-[10px] mr-1"></i> Data Edit / Posting Enabled
+                </span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="manualSaveData()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow transition-all">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Data
+                </button>
+                <button onclick="addNewRow()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow transition-all">
+                    <i class="fa-solid fa-plus"></i> Add Activity Row
+                </button>
+                <button onclick="exportToExcel()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow transition-all">
+                    <i class="fa-solid fa-file-excel"></i> Export Excel
+                </button>
+                <button onclick="exportToPDF()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow transition-all">
+                    <i class="fa-solid fa-file-pdf"></i> Export PDF
+                </button>
+                <button onclick="resetData()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-all">
+                    <i class="fa-solid fa-rotate-right"></i> Reset Baseline
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic Body Area -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+
+            <!-- Interactive Filters Section -->
+            <div class="light-card p-4 rounded-xl flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-filter text-emerald-600"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Filters / Slicers:</span>
+                    </div>
+
+                    <!-- Output Filter -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-medium text-slate-700">Output:</label>
+                        <select id="filter-output" onchange="applyFilters()" class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500">
+                            <option value="ALL">All Outputs</option>
+                            <option value="Output-1">Output-1</option>
+                            <option value="Output-2">Output-2</option>
+                            <option value="Output-3">Output-3</option>
+                            <option value="Output-4">Output-4</option>
+                        </select>
+                    </div>
+
+                    <!-- Activity Filter -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-xs font-medium text-slate-700">Activity:</label>
+                        <select id="filter-activity" onchange="applyFilters()" class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500 max-w-xs">
+                            <option value="ALL">All Activities</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 font-medium">
+                    <i class="fa-solid fa-circle-check mr-1"></i> Synchronized Financial Data & Posting Suite Active
+                </div>
+            </div>
+
+            <!-- Tab 1: Dashboard Main View -->
+            <div id="tab-dashboard-content" class="space-y-6 fade-in">
+                <!-- KPI Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="light-card p-4 rounded-xl border-l-4 border-l-emerald-600 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Initial Budget</p>
+                            <h3 id="kpi-initial" class="text-xl font-bold text-slate-900 mt-0.5">$0</h3>
+                            <p class="text-[11px] text-emerald-600 mt-1 font-medium"><i class="fa-solid fa-wallet"></i> Baseline Target</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
+
+                    <div class="light-card p-4 rounded-xl border-l-4 border-l-purple-600 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Revised Budget</p>
+                            <h3 id="kpi-revised" class="text-xl font-bold text-slate-900 mt-0.5">$0</h3>
+                            <p id="kpi-growth" class="text-[11px] text-purple-600 mt-1 font-medium"><i class="fa-solid fa-calculator"></i> Realigned Total</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                    </div>
+
+                    <div class="light-card p-4 rounded-xl border-l-4 border-l-blue-600 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Total Utilization</p>
+                            <h3 id="kpi-tot-utilized" class="text-xl font-bold text-slate-900 mt-0.5">$0</h3>
+                            <p id="kpi-tot-util-pct" class="text-[11px] text-blue-600 mt-1 font-medium"><i class="fa-solid fa-chart-line"></i> Total Utilization Rate</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                    </div>
+
+                    <div class="light-card p-4 rounded-xl border-l-4 border-l-amber-600 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">To Be Utilized</p>
+                            <h3 id="kpi-tobeutilized" class="text-xl font-bold text-slate-900 mt-0.5">$0</h3>
+                            <p id="kpi-po-info" class="text-[11px] text-amber-600 mt-1 font-medium"><i class="fa-solid fa-clock"></i> PO Commit: $0</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                    </div>
+
+                    <div class="light-card p-4 rounded-xl border-l-4 border-l-rose-600 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Burn Rate %</p>
+                            <h3 id="kpi-burnrate-card" class="text-xl font-bold text-slate-900 mt-0.5">0%</h3>
+                            <p class="text-[11px] text-rose-600 mt-1 font-medium"><i class="fa-solid fa-fire"></i> Budget Efficiency</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-fire"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Budget vs Utilization Posting -->
+                <div class="light-card p-6 rounded-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-scale-balanced text-emerald-600"></i> Detailed Budget vs Utilization Posting
+                            </h3>
+                            <p class="text-xs text-slate-600">Direct posting & editing for Initial Budget, Revised Budget, Salary + DPC + GMS, and Programmable Budget Utilization.</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                    <th class="p-3">Output</th>
+                                    <th class="p-3">Activity</th>
+                                    <th class="p-3 text-right">Initial Budget ($)</th>
+                                    <th class="p-3 text-right text-purple-800">Revised Budget ($)</th>
+                                    <th class="p-3 text-right text-pink-800">Salary + DPC + GMS (up-to-date) ($)</th>
+                                    <th class="p-3 text-right text-emerald-800">Prog. Util ($)</th>
+                                    <th class="p-3 text-right font-bold text-slate-900">Total Utilized (Salary+Prog.) ($)</th>
+                                    <th class="p-3 text-right">Remaining Balance ($)</th>
+                                    <th class="p-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="budget-vs-util-body" class="divide-y divide-slate-200">
+                            </tbody>
+                            <tfoot id="budget-vs-util-foot" class="border-t-2 border-slate-300 bg-slate-100 font-bold text-slate-900">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Analytics Suite -->
+                <div class="space-y-6 pt-4 border-t border-slate-200">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-emerald-600 text-lg"></i>
+                        <h3 class="text-base font-bold text-slate-800">Analytics & Visualization Suite</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="light-card p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                <span>1. Total vs Salary+DPC+GMS vs Prog. Utilization</span>
+                                <span class="text-[10px] text-emerald-600">Line Chart</span>
+                            </h4>
+                            <div class="h-56 relative"><canvas id="chart1"></canvas></div>
+                        </div>
+
+                        <div class="light-card p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                <span>2. % Budget vs Utilization (by Output)</span>
+                                <span class="text-[10px] text-blue-600">Bar Chart</span>
+                            </h4>
+                            <div class="h-56 relative"><canvas id="chart2"></canvas></div>
+                        </div>
+
+                        <div class="light-card p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                <span>3. Fund Contribution Breakdown</span>
+                                <span class="text-[10px] text-purple-600">Donut Chart</span>
+                            </h4>
+                            <div class="h-56 relative flex items-center justify-center"><canvas id="chart3"></canvas></div>
+                        </div>
+
+                        <div class="light-card p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                <span>4. Top High-Utilization Activities</span>
+                                <span class="text-[10px] text-amber-600">Horizontal Bar</span>
+                            </h4>
+                            <div class="h-56 relative"><canvas id="chart4"></canvas></div>
+                        </div>
+
+                        <div class="light-card p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                <span>5. Multi-Year Fund Utilization Trend</span>
+                                <span class="text-[10px] text-teal-600">Trend Line</span>
+                            </h4>
+                            <div class="h-56 relative"><canvas id="chart5"></canvas></div>
+                        </div>
+
+                        <div class="light-card p-4 rounded-xl space-y-2">
+                            <h4 class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                <span>6. Output Cost Component Comparison</span>
+                                <span class="text-[10px] text-indigo-600">Grouped Bar</span>
+                            </h4>
+                            <div class="h-56 relative"><canvas id="chart6"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Fund Overview & Prodoc Segment -->
+            <div id="tab-fund-content" class="hidden space-y-6 fade-in">
+                <div class="light-card p-6 rounded-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-building-columns text-emerald-600"></i> Funding Source & Multi-Year Overview
+                            </h3>
+                            <p class="text-xs text-slate-500">Edit donor agreements, multi-year utilization totals, and view calculated Remaining Fund Balance.</p>
+                        </div>
+                        <button onclick="addDonorRow()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow">
+                            <i class="fa-solid fa-plus mr-1"></i> Add Donor Source
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead>
+                                <tr class="border-b border-slate-200 bg-slate-100 text-slate-700 font-semibold">
+                                    <th class="p-3">Donor / Fund Source</th>
+                                    <th class="p-3 text-right">CHF Agreement</th>
+                                    <th class="p-3 text-right">USD Equivalent</th>
+                                    <th class="p-3 text-right">2023 Util</th>
+                                    <th class="p-3 text-right">2024 Util</th>
+                                    <th class="p-3 text-right">2025 Util</th>
+                                    <th class="p-3 text-right">2026 Util</th>
+                                    <th class="p-3 text-right font-bold text-blue-700">Total Utilized (Salary+Prog.)</th>
+                                    <th class="p-3 text-right font-bold text-emerald-800 bg-emerald-50">Remaining Fund Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fund-table-body" class="divide-y divide-slate-200 text-slate-800">
+                            </tbody>
+                            <tfoot id="fund-table-foot" class="border-t-2 border-slate-300 bg-slate-100 font-bold text-slate-900">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Prodoc-wise Allocation Segment -->
+                <div class="light-card p-6 rounded-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-diagram-project text-indigo-600"></i> Prodoc-Wise Allocation & Implementation
+                            </h3>
+                            <p class="text-xs text-slate-500">Track Project Document (Prodoc) allocations, actual implementation, remaining balances, and status remarks.</p>
+                        </div>
+                        <button onclick="addProdocRow()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow">
+                            <i class="fa-solid fa-plus mr-1"></i> Add Prodoc Allocation
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead>
+                                <tr class="bg-indigo-50/70 text-indigo-950 font-semibold border-b border-indigo-200">
+                                    <th class="p-3">Prodoc Output / Component</th>
+                                    <th class="p-3 text-right">Prodoc Allocation ($)</th>
+                                    <th class="p-3 text-right text-blue-800">Implementation / Utilized ($)</th>
+                                    <th class="p-3 text-right font-bold text-emerald-800 bg-emerald-50">Remaining Balance ($)</th>
+                                    <th class="p-3 text-center">Implementation %</th>
+                                    <th class="p-3">Remarks / Notes</th>
+                                    <th class="p-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prodoc-table-body" class="divide-y divide-slate-200">
+                            </tbody>
+                            <tfoot id="prodoc-table-foot" class="border-t-2 border-slate-300 bg-slate-100 font-bold text-slate-900">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Budget vs Utilization -->
+            <div id="tab-budget-content" class="hidden space-y-6 fade-in">
+                <!-- Primary Data Matrix Table -->
+                <div class="light-card rounded-xl p-5 space-y-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-table text-emerald-600"></i> Master Financial Matrix 2026
+                            </h3>
+                            <p class="text-xs text-slate-500">Includes Budgeted Salary, Salary + DPC + GMS (up-to-date), Programmable Utilization, and Burn Rate %.</p>
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xs text-slate-400"></i>
+                            <input type="text" id="table-search" onkeyup="renderTable()" placeholder="Search Activity or Output..." class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg pl-8 pr-3 py-1.5 w-60 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[500px] rounded-lg border border-slate-200">
+                        <table class="w-full text-xs text-left border-collapse sticky-header">
+                            <thead>
+                                <tr class="text-slate-700 font-semibold border-b border-slate-200">
+                                    <th class="p-3">Output</th>
+                                    <th class="p-3">Activity / Task</th>
+                                    <th class="p-3 text-right">Initial Budget</th>
+                                    <th class="p-3 text-right">Revised Budget</th>
+                                    <th class="p-3 text-right bg-pink-50 text-pink-900">Budgeted Salary</th>
+                                    <th class="p-3 text-right bg-pink-100/70 text-pink-950">Salary + DPC + GMS (up-to-date)</th>
+                                    <th class="p-3 text-right">Prog. Budget</th>
+                                    <th class="p-3 text-right bg-emerald-50 text-emerald-900">Prog. Utilization</th>
+                                    <th class="p-3 text-right font-bold bg-slate-200/60 text-slate-900">Total Utilized (Salary+Prog.)</th>
+                                    <th class="p-3 text-right">Remaining Bal</th>
+                                    <th class="p-3 text-right">PO Obligation</th>
+                                    <th class="p-3 text-right bg-purple-50 text-purple-900">Upcoming Salary & Others</th>
+                                    <th class="p-3 text-right bg-amber-50 text-amber-900">To Be Utilized</th>
+                                    <th class="p-3 text-center bg-rose-100/70 text-rose-950 font-bold">Burn Rate %</th>
+                                    <th class="p-3 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body" class="divide-y divide-slate-200 font-mono text-slate-800">
+                            </tbody>
+                            <tfoot id="table-foot" class="font-bold border-t-2 border-slate-300 bg-slate-100 font-mono text-slate-900">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 4: Present Obligations (DETAILED UNDER EVERY ACTIVITY WITH TOTAL BESIDE ACTIVITY NAME) -->
+            <div id="tab-obligations-content" class="hidden space-y-6 fade-in">
+                <div class="light-card p-6 rounded-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-file-invoice-dollar text-emerald-600"></i> Present Obligations Management
+                            </h3>
+                            <p class="text-xs text-slate-500">Track Task details, PO Number, Amount, PO Line, Paid line, Payment due, and Due date under each Activity.</p>
+                        </div>
+                    </div>
+
+                    <div id="present-obligations-container" class="space-y-6">
+                        <!-- Activity-wise Present Obligation Cards Rendered Dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 5: Salary & DPC Cost -->
+            <div id="tab-salary-content" class="hidden space-y-6 fade-in">
+                <div class="light-card p-6 rounded-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-users-gear text-pink-600"></i> Salary & DPC Cost Segment
+                            </h3>
+                            <p class="text-xs text-slate-500">Manage Budgeted Salary, Salary - (DPC+GMS), Total Salary Utilization, and Remaining Personnel Balances.</p>
+                        </div>
+                        <button onclick="addNewRow()" class="px-3 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-xs font-semibold shadow">
+                            <i class="fa-solid fa-plus mr-1"></i> Add Salary Component
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table class="w-full text-xs font-mono text-left">
+                            <thead>
+                                <tr class="bg-pink-50/80 text-pink-950 font-semibold border-b border-pink-200">
+                                    <th class="p-3">Output</th>
+                                    <th class="p-3">Activity Component</th>
+                                    <th class="p-3 text-right">Budget ($)</th>
+                                    <th class="p-3 text-right text-pink-700 font-bold">Salary ($)</th>
+                                    <th class="p-3 text-right text-purple-700 font-bold">Salary - (DPC+GMS) ($)</th>
+                                    <th class="p-3 text-right font-bold text-slate-900 bg-slate-100">Total Utilization ($)</th>
+                                    <th class="p-3 text-right font-bold text-emerald-800 bg-emerald-50">Remaining Balance ($)</th>
+                                    <th class="p-3 text-center">Salary Burn %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salary-table-body" class="divide-y divide-slate-200">
+                            </tbody>
+                            <tfoot id="salary-table-foot" class="border-t-2 border-slate-300 bg-slate-100 font-bold text-slate-900">
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 6: Upcoming Obligations -->
+            <div id="tab-upcoming-content" class="hidden space-y-6 fade-in">
+                <div class="light-card p-6 rounded-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-amber-600"></i> Upcoming Obligations & Task Details
+                            </h3>
+                            <p class="text-xs text-slate-500">Track Task Details and Upcoming Obligation amounts under each activity.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4" id="upcoming-tasks-container">
+                        <!-- Dynamic Activity & Sub-Tasks Rendered Here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 7: Settings -->
+            <div id="tab-settings-content" class="hidden light-card p-6 rounded-xl space-y-6 fade-in">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2 border-b border-slate-200 pb-3">
+                    <i class="fa-solid fa-sliders text-emerald-600"></i> System Configurations
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <h4 class="font-bold text-xs uppercase text-slate-700">Reporting Customization</h4>
+                        <div>
+                            <label class="text-xs text-slate-600 font-medium">Dashboard Title</label>
+                            <input type="text" id="setting-title" value="SIPS Financial Reporting Dashboard 2026" onchange="updateDashboardMeta()" class="edit-input w-full text-xs mt-1">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-600 font-medium">Currency Symbol</label>
+                            <input type="text" id="setting-currency" value="$" onchange="renderTable()" class="edit-input w-full text-xs mt-1">
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <h4 class="font-bold text-xs uppercase text-slate-700">Database Options</h4>
+                        <p class="text-xs text-slate-500">Restore all initial activity budgets, personnel costs, and donor balances back to the baseline state.</p>
+                        <button onclick="resetData()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-all">Restore Baseline State</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- JS Logic -->
+    <script>
+        // Persistence Keys
+        const STORAGE_KEY_ACT = 'sips_raw_activities_v4';
+        const STORAGE_KEY_FUND = 'sips_fund_data_v4';
+        const STORAGE_KEY_PRODOC = 'sips_prodoc_data_v4';
+
+        // Default Datasets
+        const defaultActivities = [
+            { 
+                id: 1, output: 'Output-1', activity: 'ACTIVITY 1.1 (BBS)', initial: 178950, revised: 202682, 
+                budgetedSalary: 88083, salaryUtilUpToDate: 48445.65, salaryDpcGms: 12000.00,
+                progBudget: 114599, progUtil: 61360.06, po: 10742, upcomingSalaryOthers: 39637.35, poRef: 'PO-10488997-1',
+                presentObligations: [
+                    { id: 201, taskDetails: 'BBS Statistical Consultancy Services', poNumber: 'PO-10488997-1', amount: 7500, poLine: '1.1', paidLine: '1.1-A', paymentDue: 2500, dueDate: '2026-11-15' },
+                    { id: 202, taskDetails: 'Field Survey Logistical Equipment', poNumber: 'PO-10488997-1B', amount: 3242, poLine: '1.2', paidLine: '1.2-A', paymentDue: 0, dueDate: '2026-10-30' }
+                ],
+                subTasks: [
+                    { id: 101, taskName: 'BBS Statistical Consultancy', amount: 25000 },
+                    { id: 102, taskName: 'Field Survey Operational Logistics', amount: 14637.35 }
+                ]
+            },
+            { 
+                id: 2, output: 'Output-1', activity: 'ACTIVITY 1.2 (GIU)', initial: 140470, revised: 236859, 
+                budgetedSalary: 52040, salaryUtilUpToDate: 28622.00, salaryDpcGms: 7500.00,
+                progBudget: 184819, progUtil: 44080.79, po: 24204, upcomingSalaryOthers: 23418.00, poRef: 'PO-10488997-2',
+                presentObligations: [
+                    { id: 203, taskDetails: 'GIU Technical Infrastructure Audit', poNumber: 'PO-10488997-2', amount: 15000, poLine: '2.1', paidLine: '2.1-A', paymentDue: 5000, dueDate: '2026-12-01' },
+                    { id: 204, taskDetails: 'Innovation Workshop Event Venue', poNumber: 'PO-10488997-2B', amount: 9204, poLine: '2.2', paidLine: '2.2-A', paymentDue: 1200, dueDate: '2026-11-05' }
+                ],
+                subTasks: [
+                    { id: 103, taskName: 'Governance Innovation Workshop', amount: 15000 },
+                    { id: 104, taskName: 'GIU Digital System Assessment', amount: 8418 }
+                ]
+            },
+            { 
+                id: 3, output: 'Output-1', activity: 'ACTIVITY 1.2.1 (BPSC)', initial: 193125, revised: 138690, 
+                budgetedSalary: 37270, salaryUtilUpToDate: 20498.50, salaryDpcGms: 5000.00,
+                progBudget: 101420, progUtil: 29890.00, po: 27260, upcomingSalaryOthers: 16771.50, poRef: 'PO-10488997-3',
+                presentObligations: [
+                    { id: 205, taskDetails: 'BPSC Examination Software Upgrades', poNumber: 'PO-10488997-3', amount: 27260, poLine: '3.1', paidLine: '3.1-A', paymentDue: 8200, dueDate: '2026-11-20' }
+                ],
+                subTasks: [
+                    { id: 105, taskName: 'BPSC Examination Software Module', amount: 16771.50 }
+                ]
+            },
+            { 
+                id: 4, output: 'Output-2', activity: 'ACTIVITY 2.1 (NHRC)', initial: 152040, revised: 45770, 
+                budgetedSalary: 1500, salaryUtilUpToDate: 825.00, salaryDpcGms: 200.00,
+                progBudget: 44270, progUtil: 746.00, po: 0, upcomingSalaryOthers: 675.00, poRef: 'PO-PENDING',
+                presentObligations: [],
+                subTasks: [
+                    { id: 106, taskName: 'Human Rights Documentation Desk', amount: 675 }
+                ]
+            },
+            { 
+                id: 5, output: 'Output-2', activity: 'ACTIVITY 2.2 (NHRC)', initial: 148220, revised: 87300, 
+                budgetedSalary: 52300, salaryUtilUpToDate: 28765.00, salaryDpcGms: 6000.00,
+                progBudget: 35000, progUtil: 42655.00, po: 0, upcomingSalaryOthers: 23535.00, poRef: 'PO-PENDING',
+                presentObligations: [],
+                subTasks: [
+                    { id: 107, taskName: 'Capacity Development Training', amount: 23535 }
+                ]
+            },
+            { 
+                id: 6, output: 'Output-2', activity: 'ACTIVITY 2.3 (BPS)', initial: 195340, revised: 155038, 
+                budgetedSalary: 26434, salaryUtilUpToDate: 14538.70, salaryDpcGms: 3500.00,
+                progBudget: 128604, progUtil: 12605.00, po: 25577, upcomingSalaryOthers: 11895.30, poRef: 'PO-10488997-4',
+                presentObligations: [
+                    { id: 206, taskDetails: 'BPS Secretariat Operations Support', poNumber: 'PO-10488997-4', amount: 25577, poLine: '4.1', paidLine: '4.1-A', paymentDue: 3500, dueDate: '2026-11-30' }
+                ],
+                subTasks: [
+                    { id: 108, taskName: 'BPS Secretariat Operations', amount: 11895.30 }
+                ]
+            },
+            { 
+                id: 7, output: 'Output-3', activity: 'ACTIVITY 3.1 (Multi-Stakeholder)', initial: 75095, revised: 50600, 
+                budgetedSalary: 38600, salaryUtilUpToDate: 21230.00, salaryDpcGms: 4500.00,
+                progBudget: 12000, progUtil: 25510.00, po: 0, upcomingSalaryOthers: 17370.00, poRef: 'PO-PENDING',
+                presentObligations: [],
+                subTasks: [
+                    { id: 109, taskName: 'Civil Society Consultation Forum', amount: 17370 }
+                ]
+            },
+            { 
+                id: 8, output: 'Output-3', activity: 'ACTIVITY 3.2 (Media on SDG issues)', initial: 74646, revised: 69190, 
+                budgetedSalary: 59190, salaryUtilUpToDate: 32554.50, salaryDpcGms: 7000.00,
+                progBudget: 10000, progUtil: 39603.71, po: 0, upcomingSalaryOthers: 26635.50, poRef: 'PO-PENDING',
+                presentObligations: [],
+                subTasks: [
+                    { id: 110, taskName: 'SDG Media Fellowship Campaign', amount: 26635.50 }
+                ]
+            },
+            { 
+                id: 9, output: 'Output-4', activity: 'ACTIVITY 4.1 (PMC)', initial: 156000, revised: 147000, 
+                budgetedSalary: 147000, salaryUtilUpToDate: 96057.00, salaryDpcGms: 18000.00,
+                progBudget: 0, progUtil: 0, po: 0, upcomingSalaryOthers: 50943.00, poRef: 'PO-COMPLETED',
+                presentObligations: [],
+                subTasks: [
+                    { id: 111, taskName: 'Project Management & Audit Support', amount: 50943 }
+                ]
+            },
+            { 
+                id: 10, output: 'Output-4', activity: 'ACTIVITY 4.2 (Office Op.)', initial: 159484, revised: 141106, 
+                budgetedSalary: 42384, salaryUtilUpToDate: 23311.20, salaryDpcGms: 5000.00,
+                progBudget: 98722, progUtil: 27871.64, po: 6956, upcomingSalaryOthers: 19072.80, poRef: 'PO-10488997-5',
+                presentObligations: [
+                    { id: 207, taskDetails: 'Office Facility Leasing & Contingencies', poNumber: 'PO-10488997-5', amount: 6956, poLine: '5.1', paidLine: '5.1-A', paymentDue: 1200, dueDate: '2026-10-25' }
+                ],
+                subTasks: [
+                    { id: 112, taskName: 'Office Utilities & Contingencies', amount: 19072.80 }
+                ]
+            }
+        ];
+
+        const defaultFundData = [
+            { id: 1, donor: 'SDC Fund (Swiss Development)', chf: 3603960.00, usd: 4213646.50, u2023: 29499.76, u2024: 706370.41, u2025: 1289127.00, u2026: 648450.27 },
+            { id: 2, donor: 'UNDP TRAC', chf: 0, usd: 428920.59, u2023: 0, u2024: 21300.00, u2025: 181438.34, u2026: 226182.25 },
+            { id: 3, donor: 'OHCHR', chf: 0, usd: 47181.96, u2023: 0, u2024: 0, u2025: 37182.24, u2026: 9999.72 }
+        ];
+
+        const defaultProdocData = [
+            { id: 1, outputComponent: 'Output 1: Inclusive Decision Making (BBS/GIU/BPSC)', allocation: 1500000.00, implementation: 950000.00, remarks: 'On Track - High Field Activity' },
+            { id: 2, outputComponent: 'Output 2: Justice & Human Rights Institutions (NHRC/BPS)', allocation: 1200000.00, implementation: 680000.00, remarks: 'Training & Workshops Ongoing' },
+            { id: 3, outputComponent: 'Output 3: Public Engagement & SDG Media (Civil Society)', allocation: 800000.00, implementation: 520000.00, remarks: 'Media Campaign Active' },
+            { id: 4, outputComponent: 'Output 4: Project Management & Quality Assurance', allocation: 1189749.05, implementation: 820000.00, remarks: 'Operational Support Fully Staffed' }
+        ];
+
+        let rawActivities = [];
+        let fundData = [];
+        let prodocData = [];
+        let chartInstances = {};
+
+        const fmt = (num) => {
+            const curr = document.getElementById('setting-currency')?.value || '$';
+            return curr + Number(num || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        function loadDataFromStorage() {
+            try {
+                const savedAct = localStorage.getItem(STORAGE_KEY_ACT);
+                const savedFund = localStorage.getItem(STORAGE_KEY_FUND);
+                const savedProdoc = localStorage.getItem(STORAGE_KEY_PRODOC);
+                rawActivities = savedAct ? JSON.parse(savedAct) : defaultActivities;
+                fundData = savedFund ? JSON.parse(savedFund) : defaultFundData;
+                prodocData = savedProdoc ? JSON.parse(savedProdoc) : defaultProdocData;
+            } catch(e) {
+                rawActivities = defaultActivities;
+                fundData = defaultFundData;
+                prodocData = defaultProdocData;
+            }
+        }
+
+        function saveDataToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY_ACT, JSON.stringify(rawActivities));
+                localStorage.setItem(STORAGE_KEY_FUND, JSON.stringify(fundData));
+                localStorage.setItem(STORAGE_KEY_PRODOC, JSON.stringify(prodocData));
+            } catch(e) {
+                console.error("Failed to save to localStorage", e);
+            }
+        }
+
+        function manualSaveData() {
+            saveDataToStorage();
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-5 right-5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-bold flex items-center gap-2 z-50 fade-in';
+            toast.innerHTML = '<i class="fa-solid fa-circle-check text-sm"></i> Dashboard Data Saved Successfully!';
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 2500);
+        }
+
+        function initSlicers() {
+            const actSelect = document.getElementById('filter-activity');
+            if(!actSelect) return;
+            actSelect.innerHTML = '<option value="ALL">All Activities</option>';
+            rawActivities.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.activity;
+                opt.textContent = a.activity;
+                actSelect.appendChild(opt);
+            });
+        }
+
+        function calcRow(row) {
+            const totalUtil = (row.progUtil || 0) + (row.salaryUtilUpToDate || 0);
+            const remBal = row.revised - totalUtil;
+            const toBeUtil = remBal; // Set To Be Utilized = Remaining Balance Amount as requested
+            const burnRate = row.revised > 0 ? ((totalUtil / row.revised) * 100).toFixed(1) : 0;
+            return { ...row, totalUtil, remBal, toBeUtil, burnRate };
+        }
+
+        function getFilteredData() {
+            const outVal = document.getElementById('filter-output')?.value || 'ALL';
+            const actVal = document.getElementById('filter-activity')?.value || 'ALL';
+            const searchVal = document.getElementById('table-search')?.value.toLowerCase() || '';
+
+            return rawActivities.filter(item => {
+                const matchOut = outVal === 'ALL' || item.output === outVal;
+                const matchAct = actVal === 'ALL' || item.activity === actVal;
+                const matchSearch = item.activity.toLowerCase().includes(searchVal) || item.output.toLowerCase().includes(searchVal);
+                return matchOut && matchAct && matchSearch;
+            }).map(calcRow);
+        }
+
+        function renderTable() {
+            saveDataToStorage();
+            const data = getFilteredData();
+            const tbody = document.getElementById('table-body');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+
+            let sumInit = 0, sumRev = 0, sumSalB = 0, sumSalUtil = 0, sumProgB = 0, sumProgU = 0, sumTotUtil = 0, sumRem = 0, sumPO = 0, sumUpSal = 0, sumToBe = 0;
+
+            data.forEach(item => {
+                sumInit += item.initial;
+                sumRev += item.revised;
+                sumSalB += item.budgetedSalary;
+                sumSalUtil += item.salaryUtilUpToDate;
+                sumProgB += item.progBudget;
+                sumProgU += item.progUtil;
+                sumTotUtil += item.totalUtil;
+                sumRem += item.remBal;
+                sumPO += item.po;
+                sumUpSal += item.upcomingSalaryOthers;
+                sumToBe += item.toBeUtil;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-100 transition-all border-b border-slate-200";
+                tr.innerHTML = `
+                    <td class="p-2.5"><input type="text" value="${item.output}" onchange="updateCell(${item.id}, 'output', this.value)" class="edit-input w-16 font-semibold text-slate-700"></td>
+                    <td class="p-2.5"><input type="text" value="${item.activity}" onchange="updateCell(${item.id}, 'activity', this.value)" class="edit-input w-40 font-medium text-slate-900"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.initial}" onchange="updateCell(${item.id}, 'initial', this.value)" class="edit-input w-20 text-right"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.revised}" onchange="updateCell(${item.id}, 'revised', this.value)" class="edit-input w-20 text-right"></td>
+                    <td class="p-2.5 text-right bg-pink-50/50"><input type="number" value="${item.budgetedSalary}" onchange="updateCell(${item.id}, 'budgetedSalary', this.value)" class="edit-input w-20 text-right"></td>
+                    <td class="p-2.5 text-right bg-pink-100/50"><input type="number" value="${item.salaryUtilUpToDate}" onchange="updateCell(${item.id}, 'salaryUtilUpToDate', this.value)" class="edit-input w-24 text-right font-semibold text-pink-700"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.progBudget}" onchange="updateCell(${item.id}, 'progBudget', this.value)" class="edit-input w-20 text-right"></td>
+                    <td class="p-2.5 text-right bg-emerald-50/50"><input type="number" value="${item.progUtil}" onchange="updateCell(${item.id}, 'progUtil', this.value)" class="edit-input w-20 text-right border-emerald-300 font-semibold text-emerald-700"></td>
+                    <td class="p-2.5 text-right font-bold text-slate-900 bg-slate-100">${fmt(item.totalUtil)}</td>
+                    <td class="p-2.5 text-right text-emerald-700 font-bold">${fmt(item.remBal)}</td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.po}" onchange="updateCell(${item.id}, 'po', this.value)" class="edit-input w-20 text-right"></td>
+                    <td class="p-2.5 text-right bg-purple-50/50"><input type="number" value="${item.upcomingSalaryOthers}" onchange="updateCell(${item.id}, 'upcomingSalaryOthers', this.value)" class="edit-input w-24 text-right font-semibold text-purple-700"></td>
+                    <td class="p-2.5 text-right bg-amber-50/50 ${item.toBeUtil < 0 ? 'text-rose-600' : 'text-amber-700'} font-bold">${fmt(item.toBeUtil)}</td>
+                    <td class="p-2.5 text-center bg-rose-50/50 font-bold text-rose-700">${item.burnRate}%</td>
+                    <td class="p-2.5 text-center"><button onclick="deleteRow(${item.id})" class="text-slate-400 hover:text-rose-600 transition-all" title="Delete Row"><i class="fa-solid fa-trash-can"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const overallBurnRate = sumRev > 0 ? ((sumTotUtil / sumRev) * 100).toFixed(1) : 0;
+
+            document.getElementById('table-foot').innerHTML = `
+                <tr>
+                    <td class="p-3 text-slate-900" colspan="2">Filtered Matrix Total (${data.length} Items)</td>
+                    <td class="p-3 text-right">${fmt(sumInit)}</td>
+                    <td class="p-3 text-right">${fmt(sumRev)}</td>
+                    <td class="p-3 text-right text-pink-700">${fmt(sumSalB)}</td>
+                    <td class="p-3 text-right text-pink-800 font-bold">${fmt(sumSalUtil)}</td>
+                    <td class="p-3 text-right">${fmt(sumProgB)}</td>
+                    <td class="p-3 text-right text-emerald-700">${fmt(sumProgU)}</td>
+                    <td class="p-3 text-right text-slate-900 font-bold bg-slate-200/60">${fmt(sumTotUtil)}</td>
+                    <td class="p-3 text-right text-emerald-700">${fmt(sumRem)}</td>
+                    <td class="p-3 text-right">${fmt(sumPO)}</td>
+                    <td class="p-3 text-right text-purple-700 font-bold">${fmt(sumUpSal)}</td>
+                    <td class="p-3 text-right text-amber-700">${fmt(sumToBe)}</td>
+                    <td class="p-3 text-center text-rose-700 font-bold bg-rose-100">${overallBurnRate}%</td>
+                    <td class="p-3"></td>
+                </tr>
+            `;
+
+            // Update Header KPI Cards
+            document.getElementById('kpi-initial').textContent = fmt(sumInit);
+            document.getElementById('kpi-revised').textContent = fmt(sumRev);
+            document.getElementById('kpi-tot-utilized').textContent = fmt(sumTotUtil);
+            document.getElementById('kpi-tobeutilized').textContent = fmt(sumRem);
+            document.getElementById('kpi-burnrate-card').textContent = `${overallBurnRate}%`;
+
+            document.getElementById('kpi-tot-util-pct').innerHTML = `<i class="fa-solid fa-chart-line"></i> ${overallBurnRate}% Overall Burn Rate`;
+            document.getElementById('kpi-po-info').innerHTML = `<i class="fa-solid fa-clock"></i> PO Commit: ${fmt(sumPO)}`;
+
+            renderCharts(data);
+            renderFundTable();
+            renderProdocTable();
+            renderSubModules();
+        }
+
+        function renderFundTable() {
+            const tbody = document.getElementById('fund-table-body');
+            const tfoot = document.getElementById('fund-table-foot');
+            if(!tbody) return;
+
+            tbody.innerHTML = '';
+            let totalChf = 0, totalUsd = 0, t23 = 0, t24 = 0, t25 = 0, t26 = 0, totalRemainingFund = 0;
+
+            fundData.forEach(item => {
+                const totalUtil = (item.u2023 || 0) + (item.u2024 || 0) + (item.u2025 || 0) + (item.u2026 || 0);
+                const remainingFund = (item.usd || 0) - totalUtil;
+                totalChf += item.chf || 0;
+                totalUsd += item.usd || 0;
+                t23 += item.u2023 || 0;
+                t24 += item.u2024 || 0;
+                t25 += item.u2025 || 0;
+                t26 += item.u2026 || 0;
+                totalRemainingFund += remainingFund;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b border-slate-200";
+                tr.innerHTML = `
+                    <td class="p-2.5"><input type="text" value="${item.donor}" onchange="updateFundCell(${item.id}, 'donor', this.value)" class="edit-input font-semibold text-slate-800 w-48"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.chf}" onchange="updateFundCell(${item.id}, 'chf', this.value)" class="edit-input text-right w-24"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.usd}" onchange="updateFundCell(${item.id}, 'usd', this.value)" class="edit-input text-right w-24"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.u2023}" onchange="updateFundCell(${item.id}, 'u2023', this.value)" class="edit-input text-right w-20"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.u2024}" onchange="updateFundCell(${item.id}, 'u2024', this.value)" class="edit-input text-right w-20"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.u2025}" onchange="updateFundCell(${item.id}, 'u2025', this.value)" class="edit-input text-right w-20"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.u2026}" onchange="updateFundCell(${item.id}, 'u2026', this.value)" class="edit-input text-right w-20"></td>
+                    <td class="p-2.5 text-right font-bold text-blue-700">${fmt(totalUtil)}</td>
+                    <td class="p-2.5 text-right font-bold text-emerald-800 bg-emerald-50">${fmt(remainingFund)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="p-3 text-slate-900">Grand Total</td>
+                    <td class="p-3 text-right">${totalChf.toLocaleString()}</td>
+                    <td class="p-3 text-right">${fmt(totalUsd)}</td>
+                    <td class="p-3 text-right">${fmt(t23)}</td>
+                    <td class="p-3 text-right">${fmt(t24)}</td>
+                    <td class="p-3 text-right">${fmt(t25)}</td>
+                    <td class="p-3 text-right">${fmt(t26)}</td>
+                    <td class="p-3 text-right text-blue-700 font-bold">${fmt(t23+t24+t25+t26)}</td>
+                    <td class="p-3 text-right text-emerald-800 font-bold bg-emerald-100/70">${fmt(totalRemainingFund)}</td>
+                </tr>
+            `;
+        }
+
+        function renderProdocTable() {
+            const tbody = document.getElementById('prodoc-table-body');
+            const tfoot = document.getElementById('prodoc-table-foot');
+            if(!tbody) return;
+
+            tbody.innerHTML = '';
+            let totalAlloc = 0, totalImpl = 0, totalRem = 0;
+
+            prodocData.forEach(item => {
+                const rem = (item.allocation || 0) - (item.implementation || 0);
+                const implPct = item.allocation > 0 ? (((item.implementation || 0) / item.allocation) * 100).toFixed(1) : 0;
+                totalAlloc += item.allocation || 0;
+                totalImpl += item.implementation || 0;
+                totalRem += rem;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b border-slate-200";
+                tr.innerHTML = `
+                    <td class="p-2.5"><input type="text" value="${item.outputComponent}" onchange="updateProdocCell(${item.id}, 'outputComponent', this.value)" class="edit-input font-medium text-slate-800 w-full text-xs"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.allocation}" onchange="updateProdocCell(${item.id}, 'allocation', this.value)" class="edit-input text-right w-28 text-xs font-bold"></td>
+                    <td class="p-2.5 text-right"><input type="number" value="${item.implementation}" onchange="updateProdocCell(${item.id}, 'implementation', this.value)" class="edit-input text-right w-28 text-xs font-bold text-blue-700"></td>
+                    <td class="p-2.5 text-right font-bold text-emerald-800 bg-emerald-50">${fmt(rem)}</td>
+                    <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-800">${implPct}%</span></td>
+                    <td class="p-2.5"><input type="text" value="${item.remarks || ''}" onchange="updateProdocCell(${item.id}, 'remarks', this.value)" placeholder="Status remarks..." class="edit-input w-full text-xs"></td>
+                    <td class="p-2.5 text-center"><button onclick="deleteProdocRow(${item.id})" class="text-slate-400 hover:text-rose-600 transition-all" title="Delete Prodoc Component"><i class="fa-solid fa-trash-can"></i></button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            const overallProdocPct = totalAlloc > 0 ? ((totalImpl / totalAlloc) * 100).toFixed(1) : 0;
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="p-3 text-slate-900">Total Prodoc Allocation & Implementation</td>
+                    <td class="p-3 text-right font-bold text-indigo-900">${fmt(totalAlloc)}</td>
+                    <td class="p-3 text-right font-bold text-blue-700">${fmt(totalImpl)}</td>
+                    <td class="p-3 text-right font-bold text-emerald-800 bg-emerald-100/70">${fmt(totalRem)}</td>
+                    <td class="p-3 text-center text-indigo-900 font-bold">${overallProdocPct}%</td>
+                    <td class="p-3 text-slate-500 italic text-[11px]">Prodoc Cumulative Summary</td>
+                    <td class="p-3"></td>
+                </tr>
+            `;
+        }
+
+        function updateProdocCell(id, field, value) {
+            const item = prodocData.find(p => p.id === id);
+            if(item) {
+                if(field === 'outputComponent' || field === 'remarks') item[field] = value;
+                else item[field] = parseFloat(value) || 0;
+                renderTable();
+            }
+        }
+
+        function addProdocRow() {
+            const newId = prodocData.length > 0 ? Math.max(...prodocData.map(p => p.id)) + 1 : 1;
+            prodocData.push({ id: newId, outputComponent: 'New Prodoc Component ' + newId, allocation: 500000, implementation: 0, remarks: 'New allocation component' });
+            renderTable();
+        }
+
+        function deleteProdocRow(id) {
+            prodocData = prodocData.filter(p => p.id !== id);
+            renderTable();
+        }
+
+        function renderSubModules() {
+            const data = getFilteredData();
+
+            // 1. Budget vs Utilization Tab Body & Foot
+            const bBody = document.getElementById('budget-vs-util-body');
+            const bFoot = document.getElementById('budget-vs-util-foot');
+            if(bBody) {
+                bBody.innerHTML = '';
+                let bSumInit = 0, bSumRev = 0, bSumSalUtil = 0, bSumProgUtil = 0, bSumTotUtil = 0, bSumRem = 0;
+
+                data.forEach(item => {
+                    bSumInit += item.initial || 0;
+                    bSumRev += item.revised || 0;
+                    bSumSalUtil += item.salaryUtilUpToDate || 0;
+                    bSumProgUtil += item.progUtil || 0;
+                    bSumTotUtil += item.totalUtil || 0;
+                    bSumRem += item.remBal || 0;
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50";
+                    tr.innerHTML = `
+                        <td class="p-3 font-semibold text-slate-700">${item.output}</td>
+                        <td class="p-3 font-medium text-slate-900">${item.activity}</td>
+                        <td class="p-3 text-right"><input type="number" value="${item.initial}" onchange="updateCell(${item.id}, 'initial', this.value)" class="edit-input w-24 text-right"></td>
+                        <td class="p-3 text-right"><input type="number" value="${item.revised}" onchange="updateCell(${item.id}, 'revised', this.value)" class="edit-input w-24 text-right font-bold text-purple-800"></td>
+                        <td class="p-3 text-right"><input type="number" value="${item.salaryUtilUpToDate}" onchange="updateCell(${item.id}, 'salaryUtilUpToDate', this.value)" class="edit-input w-28 text-right font-semibold text-pink-700"></td>
+                        <td class="p-3 text-right"><input type="number" value="${item.progUtil}" onchange="updateCell(${item.id}, 'progUtil', this.value)" class="edit-input w-28 text-right font-semibold text-emerald-700"></td>
+                        <td class="p-3 text-right font-bold text-slate-900">${fmt(item.totalUtil)}</td>
+                        <td class="p-3 text-right font-bold text-slate-800">${fmt(item.remBal)}</td>
+                        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${item.remBal >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${item.remBal >= 0 ? 'On Track' : 'Exceeded'}</span></td>
+                    `;
+                    bBody.appendChild(tr);
+                });
+
+                if(bFoot) {
+                    bFoot.innerHTML = `
+                        <tr>
+                            <td class="p-3 text-slate-900 font-bold" colspan="2">Total (${data.length} Activities)</td>
+                            <td class="p-3 text-right font-bold">${fmt(bSumInit)}</td>
+                            <td class="p-3 text-right font-bold text-purple-800">${fmt(bSumRev)}</td>
+                            <td class="p-3 text-right font-bold text-pink-800">${fmt(bSumSalUtil)}</td>
+                            <td class="p-3 text-right font-bold text-emerald-800">${fmt(bSumProgUtil)}</td>
+                            <td class="p-3 text-right font-bold text-slate-900 bg-slate-200/60">${fmt(bSumTotUtil)}</td>
+                            <td class="p-3 text-right font-bold text-emerald-800 bg-emerald-100/70">${fmt(bSumRem)}</td>
+                            <td class="p-3 text-center font-bold text-slate-700">${bSumRem >= 0 ? 'On Track' : 'Exceeded'}</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            // 2. Present Obligations Module (Detailed Task Details, PO Number, Amount, PO Line, Paid Line, Payment Due, Due Date under every activity with Total beside activity name)
+            const poContainer = document.getElementById('present-obligations-container');
+            if(poContainer) {
+                poContainer.innerHTML = '';
+                data.forEach(item => {
+                    const poItems = item.presentObligations || [];
+                    const activityPoTotal = poItems.reduce((sum, po) => sum + (po.amount || 0), 0);
+
+                    // Sync main activity.po value
+                    item.po = activityPoTotal;
+
+                    const card = document.createElement('div');
+                    card.className = "light-card p-5 rounded-xl space-y-4";
+
+                    let poRows = '';
+                    poItems.forEach((po, idx) => {
+                        poRows += `
+                            <tr class="border-b border-slate-200 hover:bg-slate-50/80 transition-all text-xs font-mono">
+                                <td class="p-2 text-center text-slate-400 font-bold">${idx + 1}</td>
+                                <td class="p-2"><input type="text" value="${po.taskDetails || ''}" onchange="updatePresentObligationItem(${item.id}, ${po.id}, 'taskDetails', this.value)" placeholder="Task Details description..." class="edit-input w-full text-xs font-medium"></td>
+                                <td class="p-2"><input type="text" value="${po.poNumber || ''}" onchange="updatePresentObligationItem(${item.id}, ${po.id}, 'poNumber', this.value)" placeholder="PO-10488..." class="edit-input w-28 text-xs text-indigo-700 font-semibold"></td>
+                                <td class="p-2 text-right"><input type="number" value="${po.amount || 0}" onchange="updatePresentObligationItem(${item.id}, ${po.id}, 'amount', this.value)" class="edit-input w-24 text-right text-xs font-bold text-emerald-700"></td>
+                                <td class="p-2"><input type="text" value="${po.poLine || ''}" onchange="updatePresentObligationItem(${item.id}, ${po.id}, 'poLine', this.value)" placeholder="PO Line" class="edit-input w-20 text-xs text-center"></td>
+                                <td class="p-2"><input type="text" value="${po.paidLine || ''}" onchange="updatePresentObligationItem(${item.id}, ${po.id}, 'paidLine', this.value)" placeholder="Paid Line" class="edit-input w-20 text-xs text-center"></td>
+                                <td class="p-2 text-right"><input type="number" value="${po.paymentDue || 0}" onchange="updatePresentObligationItem(${item.id}, ${po.id}, 'paymentDue', this.value)" class="edit-input w-24 text-right text-xs font-semibold text-rose-600"></td>
+                                <td class="p-2"><input type="date" value="${po.dueDate || ''}" onchange="updatePresentObligationItem(${item.id}, ${po.id}, 'dueDate', this.value)" class="edit-input w-32 text-xs"></td>
+                                <td class="p-2 text-center"><button onclick="deletePresentObligationItem(${item.id}, ${po.id})" class="text-slate-400 hover:text-rose-600 transition-all"><i class="fa-solid fa-trash-can"></i></button></td>
+                            </tr>
+                        `;
+                    });
+
+                    card.innerHTML = `
+                        <div class="flex flex-wrap items-center justify-between border-b border-slate-200 pb-3 gap-2">
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] uppercase font-bold text-indigo-800 bg-indigo-50 px-2.5 py-1 rounded border border-indigo-200">${item.output}</span>
+                                <h4 class="font-bold text-slate-800 text-sm">${item.activity}</h4>
+                                <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-full border border-emerald-300">
+                                    Total Present Obligation: ${fmt(activityPoTotal)}
+                                </span>
+                            </div>
+                            <button onclick="addPresentObligationItem(${item.id})" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus text-[10px]"></i> Add Obligation Row
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-xs text-left">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+                                        <th class="p-2.5 text-center w-8">#</th>
+                                        <th class="p-2.5 min-w-[200px]">Task Details</th>
+                                        <th class="p-2.5 min-w-[120px]">PO Number</th>
+                                        <th class="p-2.5 text-right min-w-[110px]">Amount ($)</th>
+                                        <th class="p-2.5 min-w-[90px]">PO Line</th>
+                                        <th class="p-2.5 min-w-[90px]">Paid Line</th>
+                                        <th class="p-2.5 text-right min-w-[110px]">Payment Due ($)</th>
+                                        <th class="p-2.5 min-w-[130px]">Due Date</th>
+                                        <th class="p-2.5 text-center w-10">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${poRows || '<tr><td colspan="9" class="p-3 text-center text-slate-400 italic">No present obligation entries for this activity. Click "+ Add Obligation Row" to add one.</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    poContainer.appendChild(card);
+                });
+            }
+
+            // 3. Salary & DPC Cost Tab Body
+            const salBody = document.getElementById('salary-table-body');
+            const salFoot = document.getElementById('salary-table-foot');
+            if(salBody) {
+                salBody.innerHTML = '';
+                let totalSalB = 0, totalSalUtil = 0, totalDpcGms = 0, totalOverallUtil = 0, totalSalRem = 0;
+                
+                data.forEach(item => {
+                    const salBudget = item.budgetedSalary || 0;
+                    const salUtil = item.salaryUtilUpToDate || 0;
+                    const dpcGms = item.salaryDpcGms || 0;
+                    const totSalUtil = salUtil + dpcGms;
+                    const remSalBal = salBudget - totSalUtil;
+                    const burnPct = salBudget > 0 ? ((totSalUtil / salBudget) * 100).toFixed(1) : 0;
+
+                    totalSalB += salBudget;
+                    totalSalUtil += salUtil;
+                    totalDpcGms += dpcGms;
+                    totalOverallUtil += totSalUtil;
+                    totalSalRem += remSalBal;
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50";
+                    tr.innerHTML = `
+                        <td class="p-3 font-semibold text-slate-700">${item.output}</td>
+                        <td class="p-3 font-medium text-slate-900">${item.activity}</td>
+                        <td class="p-3 text-right"><input type="number" value="${salBudget}" onchange="updateCell(${item.id}, 'budgetedSalary', this.value)" class="edit-input w-24 text-right font-bold text-slate-800"></td>
+                        <td class="p-3 text-right"><input type="number" value="${salUtil}" onchange="updateCell(${item.id}, 'salaryUtilUpToDate', this.value)" class="edit-input w-24 text-right font-bold text-pink-700"></td>
+                        <td class="p-3 text-right"><input type="number" value="${dpcGms}" onchange="updateCell(${item.id}, 'salaryDpcGms', this.value)" class="edit-input w-24 text-right font-bold text-purple-700"></td>
+                        <td class="p-3 text-right font-bold text-slate-900 bg-slate-100">${fmt(totSalUtil)}</td>
+                        <td class="p-3 text-right font-bold text-emerald-800 bg-emerald-50 ${remSalBal < 0 ? 'text-rose-600' : ''}">${fmt(remSalBal)}</td>
+                        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-pink-100 text-pink-800">${burnPct}%</span></td>
+                    `;
+                    salBody.appendChild(tr);
+                });
+
+                salFoot.innerHTML = `
+                    <tr>
+                        <td class="p-3" colspan="2">Salary & DPC Cost Segment Total</td>
+                        <td class="p-3 text-right font-bold">${fmt(totalSalB)}</td>
+                        <td class="p-3 text-right text-pink-700 font-bold">${fmt(totalSalUtil)}</td>
+                        <td class="p-3 text-right text-purple-700 font-bold">${fmt(totalDpcGms)}</td>
+                        <td class="p-3 text-right text-slate-900 font-bold bg-slate-200/70">${fmt(totalOverallUtil)}</td>
+                        <td class="p-3 text-right font-bold text-emerald-800 bg-emerald-100/70">${fmt(totalSalRem)}</td>
+                        <td></td>
+                    </tr>
+                `;
+            }
+
+            // 4. Upcoming Obligations Tab
+            const upContainer = document.getElementById('upcoming-tasks-container');
+            if(upContainer) {
+                upContainer.innerHTML = '';
+                data.forEach(item => {
+                    const tasks = item.subTasks || [];
+                    const subTasksTotal = tasks.reduce((a, b) => a + (b.amount || 0), 0);
+
+                    const card = document.createElement('div');
+                    card.className = "light-card p-4 rounded-xl space-y-3";
+                    
+                    let taskRows = '';
+                    tasks.forEach((t, index) => {
+                        taskRows += `
+                            <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                                <span class="text-xs text-slate-400 font-bold">#${index + 1}</span>
+                                <input type="text" value="${t.taskName || ''}" onchange="updateSubTask(${item.id}, ${t.id}, 'taskName', this.value)" placeholder="Task details description..." class="edit-input flex-1 text-xs">
+                                <div class="flex items-center gap-1">
+                                    <span class="text-xs text-slate-500 font-bold">Upcoming Obligation ($):</span>
+                                    <input type="number" value="${t.amount || 0}" onchange="updateSubTask(${item.id}, ${t.id}, 'amount', this.value)" placeholder="Amount" class="edit-input w-32 text-right text-xs font-bold text-amber-700">
+                                </div>
+                                <button onclick="deleteSubTask(${item.id}, ${t.id})" class="text-slate-400 hover:text-rose-600 transition-all text-xs px-1" title="Delete Task"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        `;
+                    });
+
+                    card.innerHTML = `
+                        <div class="flex flex-wrap items-center justify-between border-b border-slate-200 pb-2 gap-2">
+                            <div>
+                                <span class="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${item.output}</span>
+                                <h4 class="font-bold text-slate-800 text-sm mt-1">${item.activity}</h4>
+                            </div>
+                            <div class="flex items-center gap-4 text-xs font-mono">
+                                <div><span class="text-slate-500">Remaining Bal:</span> <strong class="text-emerald-700">${fmt(item.remBal)}</strong></div>
+                                <div><span class="text-slate-500">Upcoming Obligation Total:</span> <strong class="text-amber-700">${fmt(subTasksTotal)}</strong></div>
+                                <button onclick="addSubTask(${item.id})" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-semibold transition-all">
+                                    <i class="fa-solid fa-plus mr-1"></i> Add Task Detail
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-2 pt-1">
+                            ${taskRows || '<p class="text-xs text-slate-400 italic">No task details added yet. Click "+ Add Task Detail" to create tasks.</p>'}
+                        </div>
+                    `;
+                    upContainer.appendChild(card);
+                });
+            }
+        }
+
+        // Present Obligation Management Functions
+        function addPresentObligationItem(actId) {
+            const act = rawActivities.find(a => a.id === actId);
+            if(act) {
+                if(!act.presentObligations) act.presentObligations = [];
+                const newPoId = Date.now();
+                act.presentObligations.push({
+                    id: newPoId,
+                    taskDetails: 'New Task Obligation Item',
+                    poNumber: 'PO-' + Math.floor(10000000 + Math.random() * 90000000),
+                    amount: 5000,
+                    poLine: '1.0',
+                    paidLine: '1.0-A',
+                    paymentDue: 0,
+                    dueDate: new Date().toISOString().split('T')[0]
+                });
+                renderTable();
+            }
+        }
+
+        function updatePresentObligationItem(actId, poId, field, value) {
+            const act = rawActivities.find(a => a.id === actId);
+            if(act && act.presentObligations) {
+                const po = act.presentObligations.find(p => p.id === poId);
+                if(po) {
+                    if(field === 'amount' || field === 'paymentDue') {
+                        po[field] = parseFloat(value) || 0;
+                    } else {
+                        po[field] = value;
+                    }
+                    renderTable();
+                }
+            }
+        }
+
+        function deletePresentObligationItem(actId, poId) {
+            const act = rawActivities.find(a => a.id === actId);
+            if(act && act.presentObligations) {
+                act.presentObligations = act.presentObligations.filter(p => p.id !== poId);
+                renderTable();
+            }
+        }
+
+        function updateSubTask(actId, taskId, field, val) {
+            const act = rawActivities.find(a => a.id === actId);
+            if(act && act.subTasks) {
+                const t = act.subTasks.find(st => st.id === taskId);
+                if(t) {
+                    if(field === 'amount') {
+                        t.amount = parseFloat(val) || 0;
+                        act.upcomingSalaryOthers = act.subTasks.reduce((a, b) => a + (b.amount || 0), 0);
+                    } else {
+                        t[field] = val;
+                    }
+                    renderTable();
+                }
+            }
+        }
+
+        function addSubTask(actId) {
+            const act = rawActivities.find(a => a.id === actId);
+            if(act) {
+                if(!act.subTasks) act.subTasks = [];
+                const newTaskId = Date.now();
+                act.subTasks.push({ id: newTaskId, taskName: 'New Task Detail / Obligation Item', amount: 5000 });
+                act.upcomingSalaryOthers = act.subTasks.reduce((a, b) => a + (b.amount || 0), 0);
+                renderTable();
+            }
+        }
+
+        function deleteSubTask(actId, taskId) {
+            const act = rawActivities.find(a => a.id === actId);
+            if(act && act.subTasks) {
+                act.subTasks = act.subTasks.filter(st => st.id !== taskId);
+                act.upcomingSalaryOthers = act.subTasks.reduce((a, b) => a + (b.amount || 0), 0);
+                renderTable();
+            }
+        }
+
+        function updateCell(id, field, value) {
+            const item = rawActivities.find(a => a.id === id);
+            if (item) {
+                if(field === 'output' || field === 'activity' || field === 'poRef') {
+                    item[field] = value;
+                    initSlicers();
+                } else {
+                    item[field] = parseFloat(value) || 0;
+                }
+                renderTable();
+            }
+        }
+
+        function updateFundCell(id, field, value) {
+            const item = fundData.find(f => f.id === id);
+            if(item) {
+                if(field === 'donor') item[field] = value;
+                else item[field] = parseFloat(value) || 0;
+                renderTable();
+            }
+        }
+
+        function addNewRow() {
+            const newId = rawActivities.length > 0 ? Math.max(...rawActivities.map(a => a.id)) + 1 : 1;
+            rawActivities.push({
+                id: newId,
+                output: 'Output-1',
+                activity: 'NEW ACTIVITY ' + newId,
+                initial: 100000,
+                revised: 100000,
+                budgetedSalary: 20000,
+                salaryUtilUpToDate: 10000,
+                salaryDpcGms: 2000,
+                progBudget: 80000,
+                progUtil: 0,
+                po: 0,
+                upcomingSalaryOthers: 5000,
+                poRef: 'PO-NEW',
+                presentObligations: [],
+                subTasks: [{ id: Date.now(), taskName: 'Initial Task Deliverable', amount: 5000 }]
+            });
+            initSlicers();
+            renderTable();
+        }
+
+        function addDonorRow() {
+            const newId = fundData.length > 0 ? Math.max(...fundData.map(f => f.id)) + 1 : 1;
+            fundData.push({ id: newId, donor: 'New Donor Source ' + newId, chf: 0, usd: 100000, u2023: 0, u2024: 0, u2025: 0, u2026: 0 });
+            renderTable();
+        }
+
+        function deleteRow(id) {
+            rawActivities = rawActivities.filter(a => a.id !== id);
+            initSlicers();
+            renderTable();
+        }
+
+        function applyFilters() {
+            renderTable();
+        }
+
+        function renderCharts(data) {
+            const outputs = [...new Set(data.map(d => d.output))];
+            
+            const outputData = outputs.map(out => {
+                const items = data.filter(d => d.output === out);
+                return {
+                    output: out,
+                    revised: items.reduce((a, b) => a + b.revised, 0),
+                    salUtil: items.reduce((a, b) => a + b.salaryUtilUpToDate, 0),
+                    progUtil: items.reduce((a, b) => a + b.progUtil, 0),
+                    totalUtil: items.reduce((a, b) => a + b.totalUtil, 0),
+                    toBeUtil: items.reduce((a, b) => a + b.toBeUtil, 0),
+                    progBudget: items.reduce((a, b) => a + b.progBudget, 0),
+                    salary: items.reduce((a, b) => a + b.budgetedSalary, 0)
+                };
+            });
+
+            Object.keys(chartInstances).forEach(k => { if(chartInstances[k]) chartInstances[k].destroy(); });
+
+            const textColor = '#334155';
+            const gridColor = '#f1f5f9';
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+                scales: {
+                    x: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor } },
+                    y: { ticks: { color: textColor, font: { size: 9 } }, grid: { color: gridColor } }
+                }
+            };
+
+            // Chart 1
+            chartInstances.c1 = new Chart(document.getElementById('chart1'), {
+                type: 'line',
+                data: {
+                    labels: outputs,
+                    datasets: [
+                        { label: 'Total Utilized (Salary+Prog.)', data: outputData.map(d => d.totalUtil), borderColor: '#0f172a', backgroundColor: '#0f172a10', tension: 0.3, fill: true },
+                        { label: 'Salary+DPC+GMS Util', data: outputData.map(d => d.salUtil), borderColor: '#db2777', tension: 0.3 },
+                        { label: 'Prog Util', data: outputData.map(d => d.progUtil), borderColor: '#059669', tension: 0.3 }
+                    ]
+                },
+                options: commonOptions
+            });
+
+            // Chart 2
+            chartInstances.c2 = new Chart(document.getElementById('chart2'), {
+                type: 'bar',
+                data: {
+                    labels: outputs,
+                    datasets: [
+                        { label: 'Salary+DPC+GMS Util', data: outputData.map(d => d.salUtil), backgroundColor: '#db2777' },
+                        { label: 'Prog Util', data: outputData.map(d => d.progUtil), backgroundColor: '#059669' }
+                    ]
+                },
+                options: { ...commonOptions, scales: { x: { stacked: true }, y: { stacked: true } } }
+            });
+
+            // Chart 3
+            chartInstances.c3 = new Chart(document.getElementById('chart3'), {
+                type: 'doughnut',
+                data: {
+                    labels: fundData.map(f => f.donor),
+                    datasets: [{
+                        data: fundData.map(f => (f.u2023 || 0) + (f.u2024 || 0) + (f.u2025 || 0) + (f.u2026 || 0)),
+                        backgroundColor: ['#059669', '#2563eb', '#7c3aed', '#d97706', '#db2777']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 10 } } } }
+                }
+            });
+
+            // Chart 4
+            const sortedAct = [...data].sort((a, b) => b.totalUtil - a.totalUtil).slice(0, 5);
+            chartInstances.c4 = new Chart(document.getElementById('chart4'), {
+                type: 'bar',
+                data: {
+                    labels: sortedAct.map(a => a.activity.replace('ACTIVITY ', '')),
+                    datasets: [{ label: 'Total Utilization', data: sortedAct.map(a => a.totalUtil), backgroundColor: '#d97706' }]
+                },
+                options: { ...commonOptions, indexAxis: 'y' }
+            });
+
+            // Chart 5
+            const t23 = fundData.reduce((a, b) => a + (b.u2023 || 0), 0);
+            const t24 = fundData.reduce((a, b) => a + (b.u2024 || 0), 0);
+            const t25 = fundData.reduce((a, b) => a + (b.u2025 || 0), 0);
+            const t26 = fundData.reduce((a, b) => a + (b.u2026 || 0), 0);
+            chartInstances.c5 = new Chart(document.getElementById('chart5'), {
+                type: 'line',
+                data: {
+                    labels: ['2023', '2024', '2025', '2026'],
+                    datasets: [{
+                        label: 'Cumulative Fund Utilization',
+                        data: [t23, t24, t25, t26],
+                        borderColor: '#0d9488',
+                        backgroundColor: '#0d948815',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: commonOptions
+            });
+
+            // Chart 6
+            chartInstances.c6 = new Chart(document.getElementById('chart6'), {
+                type: 'bar',
+                data: {
+                    labels: outputs,
+                    datasets: [
+                        { label: 'Budgeted Salary', data: outputData.map(d => d.salary), backgroundColor: '#db2777' },
+                        { label: 'Programmable Budget', data: outputData.map(d => d.progBudget), backgroundColor: '#7c3aed' }
+                    ]
+                },
+                options: commonOptions
+            });
+        }
+
+        function switchTab(tab) {
+            ['dashboard', 'fund', 'budget', 'obligations', 'salary', 'upcoming', 'settings'].forEach(t => {
+                const nav = document.getElementById('nav-' + t);
+                if(nav) {
+                    nav.classList.remove('bg-emerald-600', 'text-white', 'shadow-sm');
+                    nav.classList.add('text-slate-600', 'hover:bg-slate-100');
+                }
+            });
+
+            const activeNav = document.getElementById('nav-' + tab);
+            if(activeNav) {
+                activeNav.classList.add('bg-emerald-600', 'text-white', 'shadow-sm');
+                activeNav.classList.remove('text-slate-600', 'hover:bg-slate-100');
+            }
+
+            document.getElementById('tab-dashboard-content').classList.add('hidden');
+            document.getElementById('tab-fund-content').classList.add('hidden');
+            document.getElementById('tab-budget-content').classList.add('hidden');
+            document.getElementById('tab-obligations-content').classList.add('hidden');
+            document.getElementById('tab-salary-content').classList.add('hidden');
+            document.getElementById('tab-upcoming-content').classList.add('hidden');
+            document.getElementById('tab-settings-content').classList.add('hidden');
+
+            if(tab === 'dashboard') {
+                document.getElementById('tab-dashboard-content').classList.remove('hidden');
+            } else if(tab === 'fund') {
+                document.getElementById('tab-fund-content').classList.remove('hidden');
+            } else if(tab === 'budget') {
+                document.getElementById('tab-budget-content').classList.remove('hidden');
+            } else if(tab === 'obligations') {
+                document.getElementById('tab-obligations-content').classList.remove('hidden');
+            } else if(tab === 'salary') {
+                document.getElementById('tab-salary-content').classList.remove('hidden');
+            } else if(tab === 'upcoming') {
+                document.getElementById('tab-upcoming-content').classList.remove('hidden');
+            } else if(tab === 'settings') {
+                document.getElementById('tab-settings-content').classList.remove('hidden');
+            }
+        }
+
+        function exportToExcel() {
+            const data = getFilteredData();
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Financial_Report");
+            XLSX.writeFile(wb, "SIPS_Financial_Dashboard_2026.xlsx");
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            doc.text("SIPS - Financial Reporting Dashboard 2026", 14, 15);
+            
+            const data = getFilteredData();
+            const tableData = data.map(d => [d.output, d.activity, d.initial, d.revised, d.budgetedSalary, d.salaryUtilUpToDate, d.progBudget, d.progUtil, d.totalUtil, d.remBal, d.po, d.upcomingSalaryOthers, d.toBeUtil, d.burnRate + '%']);
+            
+            doc.autoTable({
+                head: [['Output', 'Activity', 'Initial', 'Revised', 'Bud. Salary', 'Sal+DPC+GMS Util', 'Prog Budget', 'Prog Util', 'Total Util', 'Rem Bal', 'PO', 'Up Salary & Others', 'To Be Util', 'Burn Rate']],
+                body: tableData,
+                startY: 22,
+                styles: { fontSize: 6 }
+            });
+            doc.save("SIPS_Financial_Dashboard_2026.pdf");
+        }
+
+        function resetData() {
+            if(confirm("Are you sure you want to reset all data back to default?")) {
+                localStorage.removeItem(STORAGE_KEY_ACT);
+                localStorage.removeItem(STORAGE_KEY_FUND);
+                localStorage.removeItem(STORAGE_KEY_PRODOC);
+                location.reload();
+            }
+        }
+
+        window.onload = () => {
+            loadDataFromStorage();
+            initSlicers();
+            renderTable();
+        };
+    </script>
+</body>
+</html>
